@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAN Status Checker</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background-color: #f4f7f6; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .card { background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); width: 100%; max-width: 450px; }
+    h2 { margin-top: 0; color: #2c3e50; font-size: 22px; text-align: center; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-weight: 600; color: #4a5568; }
+    input[type="text"] { width: 100%; padding: 12px; border: 2px solid #cbd5e0; border-radius: 8px; font-size: 16px; text-transform: uppercase; letter-spacing: 1px; transition: border-color 0.2s; }
+    input[type="text"]:focus { border-color: #3182ce; outline: none; }
+    button { width: 100%; padding: 12px; background-color: #3182ce; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    button:hover { background-color: #2b6cb0; }
+    button:disabled { background-color: #a0aec0; cursor: not-allowed; }
+    .result { margin-top: 20px; padding: 15px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 16px; display: none; }
+    .status-valid { background-color: #c6f6d5; color: #22543d; border: 1px solid #9ae6b4; }
+    .status-minor { background-color: #feebc8; color: #744210; border: 1px solid #fbd38d; }
+    .status-inactive { background-color: #e2e8f0; color: #2d3748; border: 1px solid #cbd5e0; }
+    .status-invalid { background-color: #fed7d7; color: #742a2a; border: 1px solid #feb2b2; }
+    .status-error { background-color: #edf2f7; color: #4a5568; border: 1px solid #cbd5e0; }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <h2>PAN Status Checker</h2>
+  <form id="panForm">
+    <div class="form-group">
+      <label for="panInput">Enter 10-Digit PAN Number</label>
+      <input type="text" id="panInput" placeholder="e.g. LOOPS1234P" maxlength="10" required />
+    </div>
+    <button type="submit" id="submitBtn">Check Status</button>
+  </form>
+
+  <div id="resultBox" class="result"></div>
+</div>
+
+<script>
+  // Message Code Mapping Rules
+  const CODE_MAP = {
+    // Valid & Active
+    "EF01227": { status: "PAN is valid & active", class: "status-valid" },
+    "EF00048": { status: "PAN is valid & active", class: "status-valid" },
+    
+    // Valid but Minor
+    "EF00050": { status: "PAN is valid but of a minor", class: "status-minor" },
+    
+    // Inactive
+    "EF30041": { status: "PAN is valid but inactive", class: "status-inactive" },
+    "EF500102": { status: "PAN is valid but inactive", class: "status-inactive" },
+    "EF00254": { status: "PAN is valid but inactive", class: "status-inactive" },
+
+    // Invalid
+    "EF30047": { status: "PAN is invalid", class: "status-invalid" },
+    "EF00047": { status: "PAN is invalid", class: "status-invalid" },
+    "EF00082": { status: "PAN is invalid", class: "status-invalid" }
+  };
+
+  const form = document.getElementById('panForm');
+  const panInput = document.getElementById('panInput');
+  const submitBtn = document.getElementById('submitBtn');
+  const resultBox = document.getElementById('resultBox');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const pan = panInput.value.trim().toUpperCase();
+    
+    // 1. Regex Validation for PAN (5 letters, 4 digits, 1 letter)
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    if (!panRegex.test(pan)) {
+      showResult("Invalid PAN format! Must be 5 letters, 4 digits, 1 letter.", "status-invalid");
+      return;
+    }
+
+    // Prepare API request
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Checking...";
+    hideResult();
+
+    const apiUrl = "https://eportal.incometax.gov.in/iec/registrationapi/saveEntity";
+    const payload = {
+      serviceName: "checkPanDetailsService",
+      userId: pan
+    };
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      processApiResponse(data);
+
+    } catch (error) {
+      console.error("API Call Error:", error);
+      showResult("Failed to contact server or blocked by CORS policy.", "status-error");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Check Status";
+    }
+  });
+
+  function processApiResponse(data) {
+    if (!data.messages || !Array.isArray(data.messages) || data.messages.length === 0) {
+      showResult("Unable to determine PAN status.", "status-error");
+      return;
+    }
+
+    // Search messages array for matching response codes
+    let matchedStatus = null;
+    
+    for (const msg of data.messages) {
+      if (CODE_MAP[msg.code]) {
+        matchedStatus = CODE_MAP[msg.code];
+        break; // Match found
+      }
+    }
+
+    if (matchedStatus) {
+      showResult(matchedStatus.status, matchedStatus.class);
+    } else {
+      showResult("Unknown response code received.", "status-error");
+    }
+  }
+
+  function showResult(text, className) {
+    resultBox.className = `result ${className}`;
+    resultBox.textContent = text;
+    resultBox.style.display = "block";
+  }
+
+  function hideResult() {
+    resultBox.style.display = "none";
+  }
+</script>
+
+</body>
+</html>
