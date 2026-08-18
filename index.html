@@ -77,12 +77,14 @@
       return;
     }
 
-    // Prepare API request
+    // Prepare  request
     submitBtn.disabled = true;
     submitBtn.textContent = "Checking...";
     hideResult();
 
-    const apiUrl = "https://eportal.incometax.gov.in/iec/registrationapi/saveEntity";
+    const targetUrl = "https://eportal.incometax.gov.in/iec/registrationapi/saveEntity";
+    const apiUrl = "https://corsproxy.io/?" + encodeURIComponent(targetUrl);
+    // const apiUrl = "https://eportal.incometax.gov.in/iec/registrationapi/saveEntity";
     const payload = {
       serviceName: "checkPanDetailsService",
       userId: pan
