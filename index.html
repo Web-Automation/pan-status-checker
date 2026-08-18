@@ -82,9 +82,7 @@
     submitBtn.textContent = "Checking...";
     hideResult();
 
-    const targetUrl = "https://eportal.incometax.gov.in/iec/registrationapi/saveEntity";
-    const apiUrl = "https://corsproxy.io/?" + encodeURIComponent(targetUrl);
-    // const apiUrl = "https://eportal.incometax.gov.in/iec/registrationapi/saveEntity";
+    const apiUrl = "https://pan-proxy.ishu23296.workers.dev";
     const payload = {
       serviceName: "checkPanDetailsService",
       userId: pan
