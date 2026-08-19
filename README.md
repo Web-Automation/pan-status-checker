@@ -53,9 +53,11 @@ If the API response contains a message code not yet mapped in the script, the ra
 3. Under **Build and deployment** > **Branch**, select `main` (and `/root` folder) and click **Save**.
 4. Your application will be live at `https://<your-username>.github.io/<repo-name>/`.
 
+
 ## Technical Note: CORS Handling
-
+ 
 When hosting static sites on GitHub Pages, direct cross-origin API calls to government endpoints like `eportal.incometax.gov.in` may be blocked by the browser due to **CORS (Cross-Origin Resource Sharing)** rules. 
-
+ 
 If requests fail due to browser CORS policies in production:
-- Use a lightweight serverless worker (such as Cloudflare Workers or Vercel Edge Functions) as a CORS proxy to forward the request headers.
+- Use a lightweight serverless worker (such as Vercel Edge Functions) as a CORS proxy to forward the request headers, along with an India-specific region, as the ITD blocks requests from IPs outside India.
+
