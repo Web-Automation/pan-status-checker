@@ -32,6 +32,3 @@ When hosting static sites on GitHub Pages, direct cross-origin API calls to gove
 If requests fail due to browser CORS policies in production:
 - Use a lightweight serverless worker (such as Cloudflare Workers or Vercel Edge Functions) as a CORS proxy to forward the request headers.
 
-## License
-
-MIT License
